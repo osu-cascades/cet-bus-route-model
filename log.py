@@ -51,7 +51,8 @@ while True:
     '''
     c.execute(stmt, vals)
     if bus['busNumber'] in histories:
-      histories[bus['busNumber']].push(bus)
+      point = cet_bus.geo.Point(bus['latitude'], bus['longitude'])
+      histories[bus['busNumber']].push(point)
     else:
       histories[bus['busNumber']] = BusHistory(10)
   print(histories)
