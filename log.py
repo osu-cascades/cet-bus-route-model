@@ -3,6 +3,7 @@ import urllib.request
 from bs4 import BeautifulSoup
 import time
 import sqlite3
+import cet_bus
 
 conn = sqlite3.connect('test.db')
 c = conn.cursor()
