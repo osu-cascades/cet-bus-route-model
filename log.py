@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import time
 import sqlite3
 import cet_bus
+from bus_history import BusHistory
 
 conn = sqlite3.connect('test.db')
 c = conn.cursor()
@@ -27,6 +28,7 @@ while True:
   html = req.read()
   soup = BeautifulSoup(html, 'html.parser').body.string
   bus_json = json.loads(soup)
+  histories = {}
   for bus in bus_json:
     vals = [
       bus['busNumber'],
@@ -48,5 +50,10 @@ while True:
       );
     '''
     c.execute(stmt, vals)
+    if bus['busNumber'] in histories:
+      histories[bus['busNumber']].push(bus)
+    else:
+      histories[bus['busNumber']] = BusHistory(10)
+  print(histories)
   conn.commit()
   time.sleep(10)
