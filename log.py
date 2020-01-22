@@ -23,12 +23,24 @@ c.execute('''
   );
 ''')
 
+def passed_stops(route, hist):
+  res = []
+  for stop in hist:
+    if passes(hist, stop, route):
+      res.append(stop)
+
+histories = {}
+routes = {}
+
+# Take a map of bus ids to histories and return a map of bus ids to most likely routes
+def guess_routes(histories):
+  pass
+
 while True:
   req = urllib.request.urlopen('http://ridecenter.org:7016')
   html = req.read()
   soup = BeautifulSoup(html, 'html.parser').body.string
   bus_json = json.loads(soup)
-  histories = {}
   for bus in bus_json:
     vals = [
       bus['busNumber'],
@@ -38,7 +50,6 @@ while True:
       bus['speed'],
       bus['received']
     ]
-    print(vals)
     stmt = '''
       insert or ignore into buslog (bus,lat,lon,heading,speed,received) values (
         ?,
@@ -49,12 +60,18 @@ while True:
         ?
       );
     '''
-    c.execute(stmt, vals)
+    # c.execute(stmt, vals)
     if bus['busNumber'] in histories:
+      print(f'bus: {bus["busNumber"]}')
       point = cet_bus.geo.Point(bus['latitude'], bus['longitude'])
-      histories[bus['busNumber']].push(point)
+      hist = histories[bus['busNumber']]
+      hist.push(point)
+      print(f'hist is {hist}')
+      print(passed_stops(route[bus['busNumber']], hist.get()))
     else:
-      histories[bus['busNumber']] = BusHistory(10)
+      print(f'new bus: {bus["busNumber"]}')
+      histories[bus['busNumber']] = BusHistory(3)
+    routes = guess_routes(histories)
   print(histories)
   conn.commit()
   time.sleep(10)
