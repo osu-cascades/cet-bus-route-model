@@ -23,18 +23,48 @@ c.execute('''
   );
 ''')
 
+def route_paths(route_id):
+  paths = []
+  for key, path in shapes.items():
+    shape_id = key[0]
+    route_id = key[1]
+    paths.append(path)
+  return paths
+
 def passed_stops(route, hist):
   res = []
-  for stop in hist:
-    if passes(hist, stop, route):
+  for stop in stops:
+    if cet_bus.passes(hist, stop, route):
       res.append(stop)
 
 histories = {}
 routes = {}
+stops = []
+
+with open('shape.json') as shape_file:
+  with open('trips.json') as trips_file:
+    shape_json = json.loads(shape_file.read())
+    trips_json = json.loads(trips_file.read())
+    shapes = cet_bus.enumerate_shapes(trips_json, shape_json)
+    print('loaded shapes: ', shapes)
+
+with open('stops.json') as stops_file:
+  stops_json = json.loads(stops_file.read())
+  for stop_json in stops_json:
+    stops.append(cet_bus.Point(float(stop_json['stop_lat']), float(stop_json['stop_lon'])))
 
 # Take a map of bus ids to histories and return a map of bus ids to most likely routes
 def guess_routes(histories):
-  pass
+  result = {}
+  for busid, history in histories.items():
+    histo = cet_bus.route_histo(shapes, history.history)
+    if histo:
+      route_id = min(histo, key=lambda x: x[1])[0][1]
+      print('guess_route: ', route_id)
+      result[busid] = route_id
+    else:
+      result[busid] = None
+  return result
 
 while True:
   req = urllib.request.urlopen('http://ridecenter.org:7016')
@@ -63,11 +93,16 @@ while True:
     # c.execute(stmt, vals)
     if bus['busNumber'] in histories:
       print(f'bus: {bus["busNumber"]}')
-      point = cet_bus.geo.Point(bus['latitude'], bus['longitude'])
+      point = cet_bus.Point(
+        float(bus['latitude']),
+        float(bus['longitude'])
+      )
       hist = histories[bus['busNumber']]
       hist.push(point)
       print(f'hist is {hist}')
-      print(passed_stops(route[bus['busNumber']], hist.get()))
+      route_id = routes[bus['busNumber']]
+      for path in route_paths(route_id):
+        print(passed_stops(path, hist.get()))
     else:
       print(f'new bus: {bus["busNumber"]}')
       histories[bus['busNumber']] = BusHistory(3)
