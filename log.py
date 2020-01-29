@@ -23,90 +23,127 @@ c.execute('''
   );
 ''')
 
-def route_paths(route_id):
-  paths = []
-  for key, path in shapes.items():
-    shape_id = key[0]
-    route_id = key[1]
-    paths.append(path)
-  return paths
+stop_geofence_radius = 0
 
-def passed_stops(route, hist):
-  res = []
-  for stop in stops:
-    if cet_bus.passes(hist, stop, route):
-      res.append(stop)
+class BusTracker:
+  def __init__(self, shapes, stops):
+    self.shapes = shapes
+    self.stops = stops
+    self.histories = {}
+    self.route_paths = {}
+    self.routes = {}
+    self.path_stops = {}
+    self.set_path_stops()
 
-histories = {}
-routes = {}
-stops = []
+  def set_path_stops(self):
+    for key, path in self.shapes.items():
+      print(f'assigning stops to path {key}')
+      self.path_stops[key[0]] = []
+      for stop in self.stops:
+        _, dist = path.closest_segment(stop, get_distance=True)
+        if dist < stop_geofence_radius:
+          self.path_stops[key[0]].append(stop)
 
-with open('shape.json') as shape_file:
-  with open('trips.json') as trips_file:
-    shape_json = json.loads(shape_file.read())
-    trips_json = json.loads(trips_file.read())
-    shapes = cet_bus.enumerate_shapes(trips_json, shape_json)
-    print('loaded shapes: ', shapes)
+  def get_route_paths(self, route_id):
+    if route_id not in self.route_paths:
+      paths = []
+      for key, path in self.shapes.items():
+        shape_id = key[0]
+        if route_id == key[1]:
+          paths.append( (shape_id, path) )
+      self.route_paths[route_id] = paths
+    return self.route_paths[route_id]
 
-with open('stops.json') as stops_file:
-  stops_json = json.loads(stops_file.read())
-  for stop_json in stops_json:
-    stops.append(cet_bus.Point(float(stop_json['stop_lat']), float(stop_json['stop_lon'])))
+  def passed_stops(self, path_id, path, hist):
+    res = []
+    for stop in self.path_stops[path_id]:
+      if cet_bus.passes(hist, stop, path):
+        res.append(stop)
+    return res
 
-# Take a map of bus ids to histories and return a map of bus ids to most likely routes
-def guess_routes(histories):
-  result = {}
-  for busid, history in histories.items():
-    histo = cet_bus.route_histo(shapes, history.history)
-    if histo:
-      route_id = min(histo, key=lambda x: x[1])[0][1]
-      print('guess_route: ', route_id)
-      result[busid] = route_id
-    else:
-      result[busid] = None
-  return result
-
-while True:
-  req = urllib.request.urlopen('http://ridecenter.org:7016')
-  html = req.read()
-  soup = BeautifulSoup(html, 'html.parser').body.string
-  bus_json = json.loads(soup)
-  for bus in bus_json:
-    vals = [
-      bus['busNumber'],
-      bus['latitude'],
-      bus['longitude'],
-      bus['heading'],
-      bus['speed'],
-      bus['received']
-    ]
-    stmt = '''
-      insert or ignore into buslog (bus,lat,lon,heading,speed,received) values (
-        ?,
-        ?,
-        ?,
-        ?,
-        ?,
-        ?
-      );
-    '''
-    # c.execute(stmt, vals)
-    if bus['busNumber'] in histories:
-      print(f'bus: {bus["busNumber"]}')
-      point = cet_bus.Point(
-        float(bus['latitude']),
-        float(bus['longitude'])
-      )
-      hist = histories[bus['busNumber']]
+  def update_histories(self, bus_json):
+    number = bus_json['busNumber']
+    if number in self.histories:
+      print(f'updating bus: {number}')
+      try:
+        point = cet_bus.Point(
+          float(bus_json['latitude']),
+          float(bus_json['longitude'])
+        )
+      except:
+        print('invalid bus record for {number}')
+        return
+      hist = self.histories[number]
       hist.push(point)
-      print(f'hist is {hist}')
-      route_id = routes[bus['busNumber']]
-      for path in route_paths(route_id):
-        print(passed_stops(path, hist.get()))
+      print(f'hist is {hist.history}')
+      route_id = self.routes[number]
+      for path_id, path in thingy.get_route_paths(route_id):
+        passed = self.passed_stops(path_id, path, hist.get())
+        if passed:
+          print(f'bus {number} just passed stops {passed}')
     else:
-      print(f'new bus: {bus["busNumber"]}')
-      histories[bus['busNumber']] = BusHistory(3)
-    routes = guess_routes(histories)
-  print(histories)
-  conn.commit()
-  time.sleep(10)
+      print(f'new bus: {number}')
+      self.histories[number] = BusHistory(3)
+
+  # Take a map of bus ids to histories and return a map of bus ids to most likely routes
+  def guess_routes(self):
+    result = {}
+    for busid, history in self.histories.items():
+      histo = cet_bus.route_histo(self.shapes, history.history)
+      if histo:
+        route_id = min(histo, key=lambda x: x[1])[0][1]
+        print(f'guess_route: bus {busid} is on {route_id}')
+        result[busid] = route_id
+      else:
+        result[busid] = None
+    self.routes = result
+
+def initialize():
+  stops = []
+  shapes = None
+  with open('shape.json') as shape_file:
+    with open('trips.json') as trips_file:
+      shape_json = json.loads(shape_file.read())
+      trips_json = json.loads(trips_file.read())
+      shapes = cet_bus.enumerate_shapes(trips_json, shape_json)
+      print('loaded shapes: ', shapes)
+  with open('stops.json') as stops_file:
+    stops_json = json.loads(stops_file.read())
+    for stop_json in stops_json:
+      stops.append(cet_bus.Point(float(stop_json['stop_lat']), float(stop_json['stop_lon'])))
+  return BusTracker(shapes, stops)
+
+def process_stream(thingy):
+  while True:
+    req = urllib.request.urlopen('http://ridecenter.org:7016')
+    html = req.read()
+    soup = BeautifulSoup(html, 'html.parser').body.string
+    bus_json = json.loads(soup)
+    for bus in bus_json:
+      vals = [
+        bus['busNumber'],
+        bus['latitude'],
+        bus['longitude'],
+        bus['heading'],
+        bus['speed'],
+        bus['received']
+      ]
+      stmt = '''
+        insert or ignore into buslog (bus,lat,lon,heading,speed,received) values (
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?
+        );
+      '''
+      # c.execute(stmt, vals)
+      thingy.update_histories(bus)
+    thingy.guess_routes()
+    print(thingy.histories)
+    conn.commit()
+    time.sleep(10)
+
+thingy = initialize()
+process_stream(thingy)
