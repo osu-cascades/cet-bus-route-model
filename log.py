@@ -23,7 +23,8 @@ c.execute('''
   );
 ''')
 
-stop_geofence_radius = 0
+# This is completely unprincipled and evil but I will fix it later
+stop_geofence_radius = 0.001
 
 class BusTracker:
   def __init__(self, shapes, stops):
@@ -42,6 +43,7 @@ class BusTracker:
       for stop in self.stops:
         _, dist = path.closest_segment(stop, get_distance=True)
         if dist < stop_geofence_radius:
+          print(dist)
           self.path_stops[key[0]].append(stop)
 
   def get_route_paths(self, route_id):
