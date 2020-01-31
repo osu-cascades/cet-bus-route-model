@@ -23,9 +23,6 @@ c.execute('''
   );
 ''')
 
-# This is completely unprincipled and evil but I will fix it later
-stop_geofence_radius = 0.001
-
 class BusTracker:
   def __init__(self, shapes, stops):
     self.shapes = shapes
@@ -36,15 +33,22 @@ class BusTracker:
     self.path_stops = {}
     self.set_path_stops()
 
+  def get_stops_for_shape(self, shape_id):
+    stops = c.execute('''
+      select (stop_id) from stop_times where trip_id = (
+        select (trip_id) from trips where shape_id = ?
+      )
+    ''',
+      (shape_id, )
+    )
+    for stop in stops:
+      print(shape_id, " => ", stop[0])
+    return stops
+
   def set_path_stops(self):
     for key, path in self.shapes.items():
       print(f'assigning stops to path {key}')
-      self.path_stops[key[0]] = []
-      for stop in self.stops:
-        _, dist = path.closest_segment(stop, get_distance=True)
-        if dist < stop_geofence_radius:
-          print(dist)
-          self.path_stops[key[0]].append(stop)
+      self.path_stops[key[0]] = self.get_stops_for_shape(key[0])
 
   def get_route_paths(self, route_id):
     if route_id not in self.route_paths:
@@ -115,6 +119,21 @@ def initialize():
       stops.append(cet_bus.Point(float(stop_json['stop_lat']), float(stop_json['stop_lon'])))
   return BusTracker(shapes, stops)
 
+def insert_bus_observation(bus):
+  vals = [
+    bus['busNumber'],
+    bus['latitude'],
+    bus['longitude'],
+    bus['heading'],
+    bus['speed'],
+    bus['received']
+  ]
+  stmt = '''
+    insert or ignore into buslog (bus,lat,lon,heading,speed,received) values
+      (?, ?, ?, ?, ?, ?);
+  '''
+  c.execute(stmt, vals)
+
 def process_stream(thingy):
   while True:
     req = urllib.request.urlopen('http://ridecenter.org:7016')
@@ -122,25 +141,6 @@ def process_stream(thingy):
     soup = BeautifulSoup(html, 'html.parser').body.string
     bus_json = json.loads(soup)
     for bus in bus_json:
-      vals = [
-        bus['busNumber'],
-        bus['latitude'],
-        bus['longitude'],
-        bus['heading'],
-        bus['speed'],
-        bus['received']
-      ]
-      stmt = '''
-        insert or ignore into buslog (bus,lat,lon,heading,speed,received) values (
-          ?,
-          ?,
-          ?,
-          ?,
-          ?,
-          ?
-        );
-      '''
-      # c.execute(stmt, vals)
       thingy.update_histories(bus)
     thingy.guess_routes()
     print(thingy.histories)
