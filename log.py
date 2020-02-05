@@ -83,7 +83,7 @@ class BusTracker:
       hist.push(point)
       print(f'hist is {hist.history}')
       route_id = self.routes[number]
-      for path_id, path in thingy.get_route_paths(route_id):
+      for path_id, path in self.get_route_paths(route_id):
         passed = self.passed_stops(path_id, path, hist.get())
         if passed:
           print(f'bus {number} just passed stops {passed}')
@@ -134,18 +134,18 @@ def insert_bus_observation(bus):
   '''
   c.execute(stmt, vals)
 
-def process_stream(thingy):
+def process_stream(tracker):
   while True:
     req = urllib.request.urlopen('http://ridecenter.org:7016')
     html = req.read()
     soup = BeautifulSoup(html, 'html.parser').body.string
     bus_json = json.loads(soup)
     for bus in bus_json:
-      thingy.update_histories(bus)
-    thingy.guess_routes()
-    print(thingy.histories)
+      tracker.update_histories(bus)
+    tracker.guess_routes()
+    print(tracker.histories)
     conn.commit()
     time.sleep(10)
 
-thingy = initialize()
-process_stream(thingy)
+tracker = initialize()
+process_stream(tracker)
