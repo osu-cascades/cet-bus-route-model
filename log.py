@@ -32,18 +32,33 @@ class BusTracker:
     self.routes = {}
     self.path_stops = {}
     self.set_path_stops()
+    self.route_short_name_to_route_id = {}
+    self.index_route_short_names()
+
+  def index_route_short_names(self):
+    rows = c.execute('select route_id, route_short_name from routes')
+    for row in rows:
+      try:
+        self.route_short_name_to_route_id[int(row[1])] = row[0]
+      except ValueError:
+        pass # Some routes do not have a short name
 
   def get_stops_for_shape(self, shape_id):
     stops = c.execute('''
-      select (stop_id) from stop_times where trip_id = (
+      select distinct stop_lat, stop_lon, s.stop_id from
+        stop_times st inner join stops s
+          on st.stop_id = s.stop_id
+      where trip_id = (
         select (trip_id) from trips where shape_id = ?
       )
     ''',
       (shape_id, )
     )
+    result = []
     for stop in stops:
-      print(shape_id, " => ", stop[0])
-    return stops
+      print(shape_id, " => ", cet_bus.Point(stop[0], stop[1]))
+      result.append(cet_bus.Point(float(stop[0]), float(stop[1])))
+    return result
 
   def set_path_stops(self):
     for key, path in self.shapes.items():
@@ -70,20 +85,21 @@ class BusTracker:
   def update_histories(self, bus_json):
     number = bus_json['busNumber']
     if number in self.histories:
-      print(f'updating bus: {number}')
+      try:
+        route_id = int(self.routes[number])
+      except:
+        return # Bus is not on a route, so we don't care about it
       try:
         point = cet_bus.Point(
           float(bus_json['latitude']),
           float(bus_json['longitude'])
         )
       except:
-        print('invalid bus record for {number}')
         return
       hist = self.histories[number]
       hist.push(point)
-      print(f'hist is {hist.history}')
-      route_id = self.routes[number]
-      for path_id, path in self.get_route_paths(route_id):
+      route_paths = self.get_route_paths(route_id)
+      for path_id, path in route_paths:
         passed = self.passed_stops(path_id, path, hist.get())
         if passed:
           print(f'bus {number} just passed stops {passed}')
@@ -92,16 +108,19 @@ class BusTracker:
       self.histories[number] = BusHistory(3)
 
   # Take a map of bus ids to histories and return a map of bus ids to most likely routes
-  def guess_routes(self):
+  def guess_routes(self, known_routes):
     result = {}
     for busid, history in self.histories.items():
-      histo = cet_bus.route_histo(self.shapes, history.history)
-      if histo:
-        route_id = min(histo, key=lambda x: x[1])[0][1]
-        print(f'guess_route: bus {busid} is on {route_id}')
-        result[busid] = route_id
+      if busid in known_routes:
+        result[busid] = known_routes[busid]
       else:
-        result[busid] = None
+        histo = cet_bus.route_histo(self.shapes, history.history)
+        if histo:
+          route_id = min(histo, key=lambda x: x[1])[0][1]
+          result[busid] = route_id
+        else:
+          result[busid] = None
+      print(f'guess_route: bus {busid} is on {result[busid]}')
     self.routes = result
 
 def initialize():
@@ -134,6 +153,17 @@ def insert_bus_observation(bus):
   '''
   c.execute(stmt, vals)
 
+def get_known_routes(tracker):
+  known_routes = {}
+  req = urllib.request.urlopen('http://ridecenter.org:7017/list')
+  list_json = req.read()
+  buses = json.loads(list_json)
+  for bus in buses:
+    short_name = bus['Route']
+    route_id = tracker.route_short_name_to_route_id[int(short_name)]
+    known_routes[bus['bus']] = route_id
+  return known_routes
+
 def process_stream(tracker):
   while True:
     req = urllib.request.urlopen('http://ridecenter.org:7016')
@@ -142,10 +172,12 @@ def process_stream(tracker):
     bus_json = json.loads(soup)
     for bus in bus_json:
       tracker.update_histories(bus)
-    tracker.guess_routes()
-    print(tracker.histories)
+    known_routes = get_known_routes(tracker)
+    tracker.guess_routes(known_routes)
     conn.commit()
     time.sleep(10)
 
+
 tracker = initialize()
+print(f'known_routes: {get_known_routes(tracker)}')
 process_stream(tracker)
