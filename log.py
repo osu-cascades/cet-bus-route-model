@@ -6,6 +6,8 @@ import sqlite3
 import cet_bus
 from bus_history import BusHistory
 
+STOP_GEOFENCE_RADIUS = 10
+
 conn = sqlite3.connect('test.db')
 c = conn.cursor()
 
@@ -25,13 +27,9 @@ c.execute('''
 
 class BusTracker:
   def __init__(self, shapes, stops):
-    self.shapes = shapes
     self.stops = stops
     self.histories = {}
     self.route_paths = {}
-    self.routes = {}
-    self.path_stops = {}
-    self.set_path_stops()
     self.route_short_name_to_route_id = {}
     self.index_route_short_names()
 
@@ -60,35 +58,19 @@ class BusTracker:
       result.append(cet_bus.Point(float(stop[0]), float(stop[1])))
     return result
 
-  def set_path_stops(self):
-    for key, path in self.shapes.items():
-      print(f'assigning stops to path {key}')
-      self.path_stops[key[0]] = self.get_stops_for_shape(key[0])
+  def within_geofence(self, stop, bus_position):
+    return cet_bus.haversine.haversine(stop, bus_position) < STOP_GEOFENCE_RADIUS
 
-  def get_route_paths(self, route_id):
-    if route_id not in self.route_paths:
-      paths = []
-      for key, path in self.shapes.items():
-        shape_id = key[0]
-        if route_id == key[1]:
-          paths.append( (shape_id, path) )
-      self.route_paths[route_id] = paths
-    return self.route_paths[route_id]
-
-  def passed_stops(self, path_id, path, hist):
+  def passed_stops(self, point):
     res = []
-    for stop in self.path_stops[path_id]:
-      if cet_bus.passes(hist, stop, path):
+    for stop in self.stops:
+      if self.within_geofence(stop, point):
         res.append(stop)
     return res
 
   def update_histories(self, bus_json):
     number = bus_json['busNumber']
     if number in self.histories:
-      try:
-        route_id = int(self.routes[number])
-      except:
-        return # Bus is not on a route, so we don't care about it
       try:
         point = cet_bus.Point(
           float(bus_json['latitude']),
@@ -98,11 +80,9 @@ class BusTracker:
         return
       hist = self.histories[number]
       hist.push(point)
-      route_paths = self.get_route_paths(route_id)
-      for path_id, path in route_paths:
-        passed = self.passed_stops(path_id, path, hist.get())
-        if passed:
-          print(f'bus {number} just passed stops {passed}')
+      passed = self.passed_stops(point)
+      if passed:
+        print(f'bus {number} just passed stops {passed}')
     else:
       print(f'new bus: {number}')
       self.histories[number] = BusHistory(3)
@@ -153,17 +133,6 @@ def insert_bus_observation(bus):
   '''
   c.execute(stmt, vals)
 
-def get_known_routes(tracker):
-  known_routes = {}
-  req = urllib.request.urlopen('http://ridecenter.org:7017/list')
-  list_json = req.read()
-  buses = json.loads(list_json)
-  for bus in buses:
-    short_name = bus['Route']
-    route_id = tracker.route_short_name_to_route_id[int(short_name)]
-    known_routes[bus['bus']] = route_id
-  return known_routes
-
 def process_stream(tracker):
   while True:
     req = urllib.request.urlopen('http://ridecenter.org:7016')
@@ -172,12 +141,8 @@ def process_stream(tracker):
     bus_json = json.loads(soup)
     for bus in bus_json:
       tracker.update_histories(bus)
-    known_routes = get_known_routes(tracker)
-    tracker.guess_routes(known_routes)
     conn.commit()
     time.sleep(10)
 
-
 tracker = initialize()
-print(f'known_routes: {get_known_routes(tracker)}')
 process_stream(tracker)
