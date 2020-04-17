@@ -23,6 +23,27 @@ c.execute('''
   );
 ''')
 
+route_shapes = {
+  '290': ['p_30', 'p_31', 'p_746', 'p_747', 'p_748'],
+  '291': ['p_750','p_745','p_352','p_353'],
+  '292': ['p_749','p_1116'],
+  '293': ['p_1113','p_1112','p_744792','p_1667','p_1668'],
+  '3136': ['p_180304','p_176598'],
+  '3138': ['p_1105','p_176543'],
+  '4695': ['p_745174'],
+  '5917': ['p_1117','p_176608'],
+  '382': ['p_751','p_753','p_176606','p_176607'],
+  '710': ['p_1109','p_1124'],
+  '711': ['p_1106','p_1123'],
+  '712': ['p_1108','p_176539'],
+  '713': ['p_1121','p_8009'],
+  '714': ['p_1114','p_176595'],
+  '715': ['p_1110','p_176596'],
+  '716': ['p_177368','p_177368'],
+  '740': ['p_744877'],
+  '3225': ['p_180576','p_9617','p_180573','p_180574','p_111380']
+}
+
 class BusTracker:
   def __init__(self, shapes, stops):
     self.shapes = shapes
@@ -177,7 +198,22 @@ def process_stream(tracker):
     conn.commit()
     time.sleep(10)
 
+def stops_on_route(route_id):
+  stmt = '''
+    select distinct s.stop_id, stop_lat, stop_lon, stop_name from (
+      trips t inner join stop_times st on t.trip_id = st.trip_id inner join stops s on s.stop_id = st.stop_id
+    ) where route_id = ?;
+  '''
+  stops = c.execute(stmt, (route_id,))
+  json_obj = []
+  for stop in stops:
+    json_obj.append({
+      'stop_id': stop[0],
+      'stop_lat': stop[1],
+      'stop_lon': stop[2],
+      'stop_name': stop[3]
+    })
+  return json.dumps(json_obj)
 
-tracker = initialize()
-print(f'known_routes: {get_known_routes(tracker)}')
-process_stream(tracker)
+for route_id in route_shapes:
+  print(stops_on_route(route_id))
