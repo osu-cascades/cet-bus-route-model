@@ -215,5 +215,56 @@ def stops_on_route(route_id):
     })
   return json.dumps(json_obj)
 
+def stop_info_on_route(route_id):
+  stops = c.execute('''
+    select stop_lat,stop_lon,trips.direction_id, stop_sequence,departure_time, trips.route_id, stops.stop_id, trips.trip_headsign, stops.stop_name, trips.trip_id
+    from calendar
+    join trips on trips.service_id=calendar.service_id
+    join routes on trips.route_id=routes.route_id
+    join stop_times on trips.trip_id=stop_times.trip_id
+    join stops on stop_times.stop_id=stops.stop_id
+    where trips.route_id=?
+    order by trips.service_id,departure_time,direction_id,cast(shape_dist_traveled as real)
+    limit 100000000;
+  ''', (route_id, ))
+  json_obj = []
+  for stop in stops:
+    json_obj.append({
+      'stop_lat': stop[0],
+      'stop_lon': stop[1],
+      'direction_id': stop[2],
+      'stop_sequence': stop[3],
+      'departure_time': stop[4],
+      'route_id': stop[5],
+      'stop_id': stop[6],
+      'trip_headsign': stop[7],
+      'stop_name': stop[8],
+      'trip_id': stop[9],
+    })
+  return json.dumps(json_obj)
+
+def buses():
+  handle = urllib.request.urlopen('http://ridecenter.org:7017/list')
+  json_obj = json.loads(handle.read().decode('utf8'))
+  routes = c.execute('''
+    select route_short_name, route_id from routes;
+  ''')
+  route_map = {}
+  for route in routes:
+    try:
+      int_id = int(route[0])
+      route_map[int_id] = int(route[1])
+    except:
+      route_map[route[0]] = int(route[1])
+  for bus in json_obj:
+    try:
+      int_id = int(bus['Route'])
+      bus['Route'] = route_map[int_id]
+    except:
+      bus['Route'] = route_map[bus['Route']]
+  return json.dumps(json_obj),
+
 for route_id in route_shapes:
   print(stops_on_route(route_id))
+  print(stop_info_on_route(route_id))
+print(buses())
