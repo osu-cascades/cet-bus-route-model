@@ -5,6 +5,8 @@ import time
 import sqlite3
 import cet_bus
 from bus_history import BusHistory
+from cet_bus.haversine import haversine
+from cet_bus.geo import Point
 
 conn = sqlite3.connect('test.db')
 c = conn.cursor()
@@ -213,7 +215,7 @@ def stops_on_route(route_id):
       'stop_lon': stop[2],
       'stop_name': stop[3]
     })
-  return json.dumps(json_obj)
+  return json_obj
 
 def stop_info_on_route(route_id):
   stops = c.execute('''
@@ -241,7 +243,7 @@ def stop_info_on_route(route_id):
       'stop_name': stop[8],
       'trip_id': stop[9],
     })
-  return json.dumps(json_obj)
+  return json_obj
 
 def buses():
   handle = urllib.request.urlopen('http://ridecenter.org:7017/list')
@@ -264,7 +266,58 @@ def buses():
       bus['Route'] = route_map[bus['Route']]
   return json.dumps(json_obj),
 
+stops = None
+stops_info = {}
+
 for route_id in route_shapes:
-  print(stops_on_route(route_id))
-  print(stop_info_on_route(route_id))
+  stops = stops_on_route(route_id)
+  print(f'stops: {route_id}')
+  stops_info[route_id] = stop_info_on_route(route_id)
+  print(f'stops_info: {route_id}')
 print(buses())
+
+class BusTracker:
+  def __init__(self, stops):
+    self.latest_position = None
+    self.latest_stops = set()
+    self.stops = stops
+
+  def update(self, new_bus):
+    current_stops = set()
+    for stop in self.stops:
+      # 4 meters is about 10 feet
+      stop_pos = Point(float(stop['stop_lat']), float(stop['stop_lon']))
+      bus_pos = Point(float(new_bus['latitude']), float(new_bus['longitude']))
+      if haversine(stop_pos, bus_pos) < 4:
+        current_stops.add(stop)
+    self.new_stops = self.latest_stops - current_stops
+    self.latest_stops = current_stops
+    self.latest_position = (new_bus['latitude'], new_bus['longitude'])
+
+trackers = {}
+
+fake_bus_data =\
+  [ { 'busNumber': '1', 'latitude': '40', 'longitude': '40', 'Route': '710' },
+    { 'busNumber': '2', 'latitude': '40.1', 'longitude': '40.1', 'Route': '711' }
+  ]
+
+def update():
+  #bus_info = buses()
+  bus_info = fake_bus_data
+  print('***')
+  print(bus_info)
+  for bus in bus_info:
+    route_id = bus['Route']
+    stops_for_bus = stops_info[route_id]
+    if route_id not in trackers:
+      trackers[route_id] = BusTracker(stops_for_bus)
+    trackers[route_id].update(bus)
+    news = trackers[route_id].new_stops
+    if len(news):
+      print(news)
+    else:
+      print(f'no new stops on {route_id}')
+
+while True:
+  update()
+  time.sleep(1)
