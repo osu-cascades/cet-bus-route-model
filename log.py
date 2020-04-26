@@ -7,6 +7,7 @@ import cet_bus
 from bus_history import BusHistory
 from cet_bus.haversine import haversine
 from cet_bus.geo import Point
+from tracker import TransitSystemTracker
 
 conn = sqlite3.connect('test.db')
 c = conn.cursor()
@@ -137,48 +138,12 @@ for route_id in route_shapes:
   print(f'stops_info: {route_id}')
 print(buses())
 
-class BusTracker:
-  def __init__(self, stops):
-    self.latest_position = None
-    self.latest_stops = set()
-    self.stops = stops
-
-  def update(self, new_bus):
-    current_stops = set()
-    for stop in self.stops:
-      # 4 meters is about 10 feet
-      stop_pos = Point(float(stop['stop_lat']), float(stop['stop_lon']))
-      bus_pos = Point(float(new_bus['latitude']), float(new_bus['longitude']))
-      if haversine(stop_pos, bus_pos) < 4:
-        current_stops.add(stop)
-    self.new_stops = self.latest_stops - current_stops
-    self.latest_stops = current_stops
-    self.latest_position = (new_bus['latitude'], new_bus['longitude'])
-
-trackers = {}
-
 fake_bus_data =\
   [ { 'busNumber': '1', 'latitude': '40', 'longitude': '40', 'Route': '710' },
     { 'busNumber': '2', 'latitude': '40.1', 'longitude': '40.1', 'Route': '711' }
   ]
 
-def update():
-  #bus_info = buses()
-  bus_info = fake_bus_data
-  print('***')
-  print(bus_info)
-  for bus in bus_info:
-    route_id = bus['Route']
-    stops_for_bus = stops_info[route_id]
-    if route_id not in trackers:
-      trackers[route_id] = BusTracker(stops_for_bus)
-    trackers[route_id].update(bus)
-    news = trackers[route_id].new_stops
-    if len(news):
-      print(news)
-    else:
-      print(f'no new stops on {route_id}')
-
+transit = TransitSystemTracker(lambda : fake_bus_data, stops_info)
 while True:
-  update()
+  transit.update()
   time.sleep(1)
