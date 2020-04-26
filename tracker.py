@@ -17,11 +17,11 @@ class BusTracker:
   def update(self, new_bus):
     current_stops = set()
     for stop in self.stops:
-      # 4 meters is about 10 feet
       stop_pos = Point(float(stop['stop_lat']), float(stop['stop_lon']))
       bus_pos = Point(float(new_bus['latitude']), float(new_bus['longitude']))
+      # 4 meters is about 10 feet
       if haversine(stop_pos, bus_pos) < 4:
-        current_stops.add(stop)
+        current_stops.add((stop_pos.x, stop_pos.y))
     self.new_stops = self.latest_stops - current_stops
     self.latest_stops = current_stops
     self.latest_position = (new_bus['latitude'], new_bus['longitude'])

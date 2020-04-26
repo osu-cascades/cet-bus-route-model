@@ -126,7 +126,7 @@ def buses():
       bus['Route'] = route_map[int_id]
     except:
       bus['Route'] = route_map[bus['Route']]
-  return json.dumps(json_obj),
+  return json_obj
 
 stops = None
 stops_info = {}
@@ -138,12 +138,7 @@ for route_id in route_shapes:
   print(f'stops_info: {route_id}')
 print(buses())
 
-fake_bus_data =\
-  [ { 'busNumber': '1', 'latitude': '40', 'longitude': '40', 'Route': '710' },
-    { 'busNumber': '2', 'latitude': '40.1', 'longitude': '40.1', 'Route': '711' }
-  ]
-
-transit = TransitSystemTracker(lambda : fake_bus_data, stops_info)
+transit = TransitSystemTracker(buses, stops_info)
 while True:
   transit.update()
   time.sleep(1)
