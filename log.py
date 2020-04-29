@@ -136,9 +136,19 @@ for route_id in route_shapes:
   print(f'stops: {route_id}')
   stops_info[route_id] = stop_info_on_route(route_id)
   print(f'stops_info: {route_id}')
-print(buses())
 
-transit = TransitSystemTracker(buses, stops_info)
+class Route:
+  def __init__(self, **kwargs):
+    self.start = kwargs['start']
+    self.end = kwargs['end']
+
+routes =\
+  { '710': Route(start=2456761, end=21004),
+    '711': Route(start=2456761, end=20970),
+    '713': Route(start=2456765, end=835820),
+  }
+
+transit = TransitSystemTracker(buses, stops_info, routes)
 while True:
   transit.update()
   time.sleep(1)
