@@ -145,7 +145,12 @@ class Route:
 routes =\
   { '710': Route(start=2456761, end=21004),
     '711': Route(start=2456761, end=20970),
+    '712': Route(start=2456765, end=20896),
     '713': Route(start=2456765, end=835820),
+    '715': Route(start=2456761, end=805200),
+    '3136': Route(start=2456761, end=805200),
+    '292': Route(start=16173, end=2456764),
+    '293': Route(start=2456762, end=2328349)
   }
 
 transit = TransitSystemTracker(buses, stops_info, routes)
