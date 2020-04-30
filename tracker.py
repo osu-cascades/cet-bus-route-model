@@ -18,25 +18,28 @@ class BusTracker:
     self.start = start
     self.end = end
     self.direction_id = 0
+    self.bus_stop_radius = 50
+    self.new_stops = set()
+    self.latest_stops = set()
 
   def update(self, new_bus):
-    print(f"updating {new_bus['bus']}")
+    try:
+      bus_pos = Point(float(new_bus['latitude']), float(new_bus['longitude']))
+    except:
+      print(f"invalid bus position: {(new_bus['latitude'], new_bus['longitude'])}")
+      return
     current_stops = set()
-    print(len(self.stops))
     for stop in self.stops:
       stop_pos = Point(float(stop['stop_lat']), float(stop['stop_lon']))
-      bus_pos = Point(float(new_bus['latitude']), float(new_bus['longitude']))
-      # 4 meters is about 10 feet
-      if haversine(stop_pos, bus_pos) < 50:
-        print(f"At stop {stop['stop_id']} (bus id: {new_bus['bus']})")
+      if haversine(stop_pos, bus_pos) < self.bus_stop_radius:
         if stop['stop_id'] == self.start:
           self.direction_id = 0
         if stop['stop_id'] == self.end:
           self.direction_id = 1
         if self.direction_id == int(stop['direction_id']):
           current_stops.add((stop_pos.x, stop_pos.y, stop['stop_id']))
-    self.new_stops = self.latest_stops - current_stops
-    self.latest_stops = current_stops
+    self.new_stops = current_stops - self.latest_stops
+    self.latest_stops = set(current_stops)
     self.latest_position = (new_bus['latitude'], new_bus['longitude'])
 
 class TransitSystemTracker:
