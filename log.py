@@ -142,15 +142,20 @@ class Route:
     self.start = kwargs['start']
     self.end = kwargs['end']
 
+# TODO: Special-case route 3225 which has no start/end data
 routes =\
-  { '710': Route(start=2456761, end=21004),
+  {
+    '290': Route(start=10084, end=16173),
+    '292': Route(start=16173, end=2456764),
+    '293': Route(start=2456762, end=2328349),
+    '710': Route(start=2456761, end=21004),
     '711': Route(start=2456761, end=20970),
     '712': Route(start=2456765, end=20896),
     '713': Route(start=2456765, end=835820),
+    '714': Route(start=2456765, end=805200),
     '715': Route(start=2456761, end=805200),
+    '716': Route(start=2456762, end=2319861),
     '3136': Route(start=2456761, end=805200),
-    '292': Route(start=16173, end=2456764),
-    '293': Route(start=2456762, end=2328349)
   }
 
 transit = TransitSystemTracker(buses, stops_info, routes)
