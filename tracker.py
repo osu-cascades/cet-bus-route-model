@@ -20,7 +20,7 @@ class BusTracker:
     self.direction_id = 0
     self.bus_stop_radius = 50
     self.new_stops = set()
-    self.latest_stops = set()
+    self.latest_stops = None
 
   def update(self, new_bus):
     try:
@@ -38,7 +38,10 @@ class BusTracker:
           self.direction_id = 1
         if self.direction_id == int(stop['direction_id']):
           current_stops.add((stop_pos.x, stop_pos.y, stop['stop_id']))
-    self.new_stops = current_stops - self.latest_stops
+    if self.latest_stops:
+      self.new_stops = current_stops - self.latest_stops
+    else:
+      self.new_stops = set()
     self.latest_stops = set(current_stops)
     self.latest_position = (new_bus['latitude'], new_bus['longitude'])
 
@@ -63,11 +66,9 @@ class TransitSystemTracker:
       except:
         print(f'No start/end data for route {route_id}; skipping')
         continue
-      self.trackers[bus_id] = BusTracker(stops_for_bus, start, end)
+      if bus_id not in self.trackers:
+        self.trackers[bus_id] = BusTracker(stops_for_bus, start, end)
       self.trackers[bus_id].update(bus)
       news = self.trackers[bus_id].new_stops
-      print(self.trackers[bus_id].latest_stops)
       if len(news):
-        print(news)
-      else:
-        print(f'no new stops for bus #{bus_id} on route #{route_id}')
+        print(f'arrival: {news}')
