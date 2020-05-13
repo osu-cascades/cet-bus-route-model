@@ -9,43 +9,7 @@ from cet_bus.haversine import haversine
 from cet_bus.geo import Point
 from tracker import TransitSystemTracker
 
-conn = sqlite3.connect('test.db')
-c = conn.cursor()
-
-c.execute('''
-  create table if not exists buslog (
-    bus char(32) not null,
-    lat char(32) not null,
-    lon char(32) not null,
-    heading char(8) not null,
-    speed char(8) not null,
-    received datetime,
-    route char(16) not null default '',
-    stopid char(16) not null default '',
-    primary key(bus, received)
-  );
-''')
-
-route_shapes = {
-  '290': ['p_30', 'p_31', 'p_746', 'p_747', 'p_748'],
-  '291': ['p_750','p_745','p_352','p_353'],
-  '292': ['p_749','p_1116'],
-  '293': ['p_1113','p_1112','p_744792','p_1667','p_1668'],
-  '3136': ['p_180304','p_176598'],
-  '3138': ['p_1105','p_176543'],
-  '4695': ['p_745174'],
-  '5917': ['p_1117','p_176608'],
-  '382': ['p_751','p_753','p_176606','p_176607'],
-  '710': ['p_1109','p_1124'],
-  '711': ['p_1106','p_1123'],
-  '712': ['p_1108','p_176539'],
-  '713': ['p_1121','p_8009'],
-  '714': ['p_1114','p_176595'],
-  '715': ['p_1110','p_176596'],
-  '716': ['p_177368','p_177368'],
-  '740': ['p_744877'],
-  '3225': ['p_180576','p_9617','p_180573','p_180574','p_111380']
-}
+c = None
 
 def insert_bus_observation(bus):
   vals = [
@@ -128,19 +92,31 @@ def buses():
       bus['Route'] = route_map[bus['Route']]
   return json_obj
 
-stops = None
-stops_info = {}
-
-for route_id in route_shapes:
-  stops = stops_on_route(route_id)
-  print(f'stops: {route_id}')
-  stops_info[route_id] = stop_info_on_route(route_id)
-  print(f'stops_info: {route_id}')
-
 class Route:
   def __init__(self, **kwargs):
     self.start = kwargs['start']
     self.end = kwargs['end']
+
+route_shapes = {
+  '290': ['p_30', 'p_31', 'p_746', 'p_747', 'p_748'],
+  '291': ['p_750','p_745','p_352','p_353'],
+  '292': ['p_749','p_1116'],
+  '293': ['p_1113','p_1112','p_744792','p_1667','p_1668'],
+  '3136': ['p_180304','p_176598'],
+  '3138': ['p_1105','p_176543'],
+  '4695': ['p_745174'],
+  '5917': ['p_1117','p_176608'],
+  '382': ['p_751','p_753','p_176606','p_176607'],
+  '710': ['p_1109','p_1124'],
+  '711': ['p_1106','p_1123'],
+  '712': ['p_1108','p_176539'],
+  '713': ['p_1121','p_8009'],
+  '714': ['p_1114','p_176595'],
+  '715': ['p_1110','p_176596'],
+  '716': ['p_177368','p_177368'],
+  '740': ['p_744877'],
+  '3225': ['p_180576','p_9617','p_180573','p_180574','p_111380']
+}
 
 # TODO: Special-case route 3225 which has no start/end data
 routes =\
@@ -158,7 +134,35 @@ routes =\
     '3136': Route(start=2456761, end=805200),
   }
 
-transit = TransitSystemTracker(buses, stops_info, routes)
-while True:
-  transit.update()
-  time.sleep(1)
+def log():
+  global c
+  conn = sqlite3.connect('test.db')
+  c = conn.cursor()
+
+  c.execute('''
+    create table if not exists buslog (
+      bus char(32) not null,
+      lat char(32) not null,
+      lon char(32) not null,
+      heading char(8) not null,
+      speed char(8) not null,
+      received datetime,
+      route char(16) not null default '',
+      stopid char(16) not null default '',
+      primary key(bus, received)
+    );
+  ''')
+
+  stops = None
+  stops_info = {}
+
+  for route_id in route_shapes:
+    stops = stops_on_route(route_id)
+    print(f'stops: {route_id}')
+    stops_info[route_id] = stop_info_on_route(route_id)
+    print(f'stops_info: {route_id}')
+
+  transit = TransitSystemTracker(buses, stops_info, routes)
+  while True:
+    transit.update()
+    time.sleep(1)
