@@ -1,0 +1,14 @@
+service_id,service_name,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date
+c_3167_b_2778_d_31,Community Connectors (Weekday),1,1,1,1,1,0,0,20170101,20200101
+c_300_b_16698_d_96,Ride the River (Weekend),0,0,0,0,0,1,1,20190615,20190902
+c_300_b_16698_d_127,Ride the River (All days of week),1,1,1,1,1,1,1,20190615,20190902
+c_2714_b_16694_d_127,Lava Butte (All days of week),1,1,1,1,1,1,1,20190615,20190902
+c_17713_b_21888_d_31,Rt 22 Service Change (Weekday),1,1,1,1,1,0,0,20190701,20190903
+c_17712_b_21887_d_31,Rt 22 Service Change (Weekday),1,1,1,1,1,0,0,20190904,20200101
+c_17567_b_21567_d_31,"Starting June 3rd, 2019 (Weekday)",1,1,1,1,1,0,0,20190603,20200101
+c_17352_b_20972_d_32,Route 2 Regular (Saturday only),0,0,0,0,0,1,0,20190518,20200101
+c_17352_b_20972_d_31,Route 2 Regular (Weekday),1,1,1,1,1,0,0,20190518,20200101
+c_16977_b_19717_d_32,Rt 3 Post Construction - Year Round Service (Saturday only),0,0,0,0,0,1,0,20190518,20200101
+c_16977_b_19717_d_31,Rt 3 Post Construction - Year Round Service (Weekday),1,1,1,1,1,0,0,20190518,20200101
+c_120_b_654_d_32,Year Round Service (Saturday only),0,0,0,0,0,1,0,20140101,20200101
+c_120_b_654_d_31,Year Round Service (Weekday),1,1,1,1,1,0,0,20140101,20200101

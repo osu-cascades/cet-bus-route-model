@@ -11,6 +11,20 @@ from tracker import TransitSystemTracker
 
 c = None
 
+def log_stop_arrival(bus,stop):
+  vals = [
+    bus['busNumber'],
+    bus['latitude'],
+    bus['longitude'],
+    stop['stop_id'],
+    bus['received']
+  ]
+  stmt = '''
+    insert or ignore into buslog (bus,lat,lon,stopid,received) values
+      (?, ?, ?, ?, ?, ?);
+  '''
+  c.execute(stmt, vals)
+
 def insert_bus_observation(bus):
   vals = [
     bus['busNumber'],

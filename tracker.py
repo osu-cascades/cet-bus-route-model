@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import time
 import sqlite3
 import cet_bus
+import log as lg
 from bus_history import BusHistory
 from cet_bus.haversine import haversine
 from cet_bus.geo import Point
@@ -68,6 +69,7 @@ class TransitSystemTracker:
         self.trackers[bus_id].update(bus)
         news = self.trackers[bus_id].new_stops
         if len(news):
+          lg.log_stop_arrival(bus,news)
           print(f'arrival: {news}')
 
   def add_bus_tracker(self, bus_id, route_id):
