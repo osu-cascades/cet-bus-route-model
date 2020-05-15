@@ -7,6 +7,19 @@ import cet_bus
 from cet_bus.haversine import haversine
 from cet_bus.geo import Point
 from tracker import TransitSystemTracker
+import os
+import time
+
+MODE = 'DEBUG'
+if 'CET_BUS_MODEL_MODE' in os.environ:
+  MODE = os.environ['CET_BUS_MODEL_MODE']
+
+DB = ''
+if 'CET_BUS_MODEL_DB' in os.environ:
+  DB = os.environ['CET_BUS_MODEL_DB']
+
+print(f'Running in {MODE} mode.')
+print(f'Using database {DB}.')
 
 def log_stop_arrival(bus_id, lat, lon, stop_id, received):
   vals = [busid, lat, lon, stop_id, received]
@@ -14,7 +27,7 @@ def log_stop_arrival(bus_id, lat, lon, stop_id, received):
     insert or ignore into arrival_log (bus,lat,lon,stopid,received) values
       (?, ?, ?, ?, ?, ?);
   '''
-  conn = sqlite3.connect('test.db')
+  conn = sqlite3.connect(DB)
   c = conn.cursor()
   c.execute(stmt, vals)
   conn.commit()
@@ -32,7 +45,7 @@ def log_bus_position(bus):
     insert or ignore into position_log (bus,lat,lon,heading,speed,received) values
       (?, ?, ?, ?, ?, ?);
   '''
-  conn = sqlite3.connect('test.db')
+  conn = sqlite3.connect(DB)
   c = conn.cursor()
   c.execute(stmt, vals)
   conn.commit()
@@ -43,7 +56,7 @@ def stops_on_route(route_id):
       trips t inner join stop_times st on t.trip_id = st.trip_id inner join stops s on s.stop_id = st.stop_id
     ) where route_id = ?;
   '''
-  conn = sqlite3.connect('test.db')
+  conn = sqlite3.connect(DB)
   c = conn.cursor()
   stops = c.execute(stmt, (route_id,))
   json_obj = []
@@ -57,7 +70,7 @@ def stops_on_route(route_id):
   return json_obj
 
 def stop_info_on_route(route_id):
-  conn = sqlite3.connect('test.db')
+  conn = sqlite3.connect(DB)
   c = conn.cursor()
   stops = c.execute('''
     select stop_lat,stop_lon,trips.direction_id, stop_sequence,departure_time, trips.route_id, stops.stop_id, trips.trip_headsign, stops.stop_name, trips.trip_id
@@ -89,7 +102,7 @@ def stop_info_on_route(route_id):
 def buses():
   handle = urllib.request.urlopen('http://ridecenter.org:7017/list')
   json_obj = json.loads(handle.read().decode('utf8'))
-  conn = sqlite3.connect('test.db')
+  conn = sqlite3.connect(DB)
   c = conn.cursor()
   routes = c.execute('''
     select route_short_name, route_id from routes;
@@ -108,6 +121,37 @@ def buses():
     except:
       bus['Route'] = route_map[bus['Route']]
   return json_obj
+
+def fake_buses():
+  return [
+    {
+      'latitude': 0,
+      'longitude': 0,
+      'bus': 1,
+      'heading': 0,
+      'speed': 0,
+      'received': time.time(),
+      'Route': '710'
+    },
+    {
+      'latitude': 0,
+      'longitude': 0,
+      'bus': 2,
+      'heading': 0,
+      'speed': 0,
+      'received': time.time(),
+      'Route': '711'
+    },
+    {
+      'latitude': 0,
+      'longitude': 0,
+      'bus': 3,
+      'heading': 0,
+      'speed': 0,
+      'received': time.time(),
+      'Route': '712'
+    }
+  ]
 
 class Route:
   def __init__(self, **kwargs):
@@ -152,7 +196,7 @@ routes =\
   }
 
 def log(transit_state):
-  conn = sqlite3.connect('test.db')
+  conn = sqlite3.connect(DB)
   c = conn.cursor()
 
   c.execute('''
@@ -192,7 +236,7 @@ def log(transit_state):
     print(f'stops_info: {route_id}')
 
   transit = TransitSystemTracker(
-    buses,
+    fake_buses if MODE == 'DEBUG' else buses,
     stops_info,
     routes,
     log_stop_arrival,
