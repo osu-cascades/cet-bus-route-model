@@ -10,6 +10,12 @@ This application is intended to be run with python 3.7. You need to have the fol
 - flask
 - bs4
 
+You can install these packages by running:
+```
+$ pip3 install flask
+$ pip3 install bs4
+```
+
 You also need to install the `cet_bus` package included in the repo. You can do that by running these two commands in your shell:
 ```
 $ cd cet_bus
