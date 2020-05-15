@@ -20,4 +20,11 @@ Alternatively, if you have nix installed, you can simply run `nix-shell shell.ni
 
 # Running
 
+You have to specify the mode (debug or production) and database file via environment variables like this:
+
+```
+$ export CET_BUS_MODEL_MODE=DEBUG
+$ export CET_BUS_MODEL_DB=arrivals.db   # Same database that contains the gtfs data
+```
+
 You can run the application with `flask run -p PORT`, where `PORT` is the port on which you want the application to serve HTTP requests.
