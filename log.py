@@ -20,12 +20,12 @@ def log_stop_arrival(bus,stop):
     bus['received']
   ]
   stmt = '''
-    insert or ignore into buslog (bus,lat,lon,stopid,received) values
+    insert or ignore into arrival_log (bus,lat,lon,stopid,received) values
       (?, ?, ?, ?, ?, ?);
   '''
   c.execute(stmt, vals)
 
-def insert_bus_observation(bus):
+def log_bus_position(bus):
   vals = [
     bus['busNumber'],
     bus['latitude'],
@@ -35,7 +35,7 @@ def insert_bus_observation(bus):
     bus['received']
   ]
   stmt = '''
-    insert or ignore into buslog (bus,lat,lon,heading,speed,received) values
+    insert or ignore into position_log (bus,lat,lon,heading,speed,received) values
       (?, ?, ?, ?, ?, ?);
   '''
   c.execute(stmt, vals)
@@ -154,7 +154,7 @@ def log():
   c = conn.cursor()
 
   c.execute('''
-    create table if not exists buslog (
+    create table if not exists position_log (
       bus char(32) not null,
       lat char(32) not null,
       lon char(32) not null,
@@ -166,6 +166,17 @@ def log():
       primary key(bus, received)
     );
   ''')
+
+  c.execute('''
+    create table if not exists arrival_log (
+      bus char(32) not null,
+      lat char(32) not null,
+      lon char(32) not null,
+      stopid char(16) not null default '',
+      received datetime,
+      primary key(bus, received)
+    );
+      ''')
 
   stops = None
   stops_info = {}
