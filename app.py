@@ -18,13 +18,11 @@ def bus_positions():
   res = {}
   for bus_id in tracker.trackers:
     bus_tracker = tracker.trackers[bus_id]
-    res[bus_id] = []
-    bus_on_route = res[bus_id]
     lat, lon = lat_long(bus_tracker)
-    bus_on_route.append({
+    res[bus_id] = {
       'route_id': bus_tracker.route_id,
       'lat': lat,
-      'lon': lon })
+      'lon': lon }
   return res
 
 
