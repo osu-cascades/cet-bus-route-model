@@ -14,10 +14,19 @@ import math
 MODE = 'DEBUG'
 if 'CET_BUS_MODEL_MODE' in os.environ:
   MODE = os.environ['CET_BUS_MODEL_MODE']
+else:
+  print('Defaulting to DEBUG mode since no mode was set in the environment.')
 
 DB = ''
 if 'CET_BUS_MODEL_DB' in os.environ:
   DB = os.environ['CET_BUS_MODEL_DB']
+  if not os.path.isfile(DB):
+    print(f'A database file is configured but the file does not appear to exist.')
+    print(f'The configured file path is: "{DB}"')
+    exit()
+else:
+  print('No database file is configured. Please specify a sqlite database in $CET_BUS_MODEL_DB.')
+  exit()
 
 print(f'Running in {MODE} mode.')
 print(f'Using database {DB}.')
