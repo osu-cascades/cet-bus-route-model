@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 import threading
 import time
 from log import log
@@ -24,7 +24,6 @@ def bus_positions():
       'lat': lat,
       'lon': lon }
   return res
-
 
 def new_stops():
   tracker = transit_state['value']
@@ -58,11 +57,13 @@ def latest_stops():
 
 @app.route('/')
 def buses():
-  return {
+  response = jsonify({
     'bus_positions': bus_positions(),
     'new_stops': new_stops(),
     'latest_stops': latest_stops()
-  }
+  })
+  response.headers.add('Access-Control-Allow-Origin', '*')
+  return response
 
 def log_task():
   global transit_state
