@@ -1,4 +1,4 @@
-This application polls bus data from the ridecenter.org API and logs bus positions and their arrivals at stops. It also serves the latest bus position data over HTTP.
+This application polls bus data from the ridecenter.org API and logs bus positions and their arrivals at stops. It also serves the latest bus position data in JSON format at the path `/`. When an arrival occurs, it is logged to the console as well as the database.
 
 # Database setup
 
