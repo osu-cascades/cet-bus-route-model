@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import time
 import sqlite3
 import cet_bus
-from bus_history import BusHistory
 from cet_bus.haversine import haversine
 from cet_bus.geo import Point
 from tracker import TransitSystemTracker
