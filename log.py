@@ -9,6 +9,7 @@ from cet_bus.geo import Point
 from tracker import TransitSystemTracker
 import os
 import time
+import math
 
 MODE = 'DEBUG'
 if 'CET_BUS_MODEL_MODE' in os.environ:
@@ -22,10 +23,10 @@ print(f'Running in {MODE} mode.')
 print(f'Using database {DB}.')
 
 def log_stop_arrival(bus_id, lat, lon, stop_id, received):
-  vals = [busid, lat, lon, stop_id, received]
+  vals = [bus_id, lat, lon, stop_id, received]
   stmt = '''
     insert or ignore into arrival_log (bus,lat,lon,stopid,received) values
-      (?, ?, ?, ?, ?, ?);
+      (?, ?, ?, ?, ?);
   '''
   conn = sqlite3.connect(DB)
   c = conn.cursor()
@@ -99,6 +100,32 @@ def stop_info_on_route(route_id):
     })
   return json_obj
 
+fake_stops = {
+  '710': [
+    {
+      "stop_lat": 44.0540306,
+      "stop_lon": -121.30264,
+      "direction_id": 0,
+      "route_id": "710",
+      "stop_id": 20964
+    },
+    {
+      "stop_lat": 44.048447,
+      "stop_lon": -121.302605,
+      "direction_id": 0,
+      "route_id": "710",
+      "stop_id": 20996
+    },
+    {
+      "stop_lat": 44.045139,
+      "stop_lon": -121.302605,
+      "direction_id": 0,
+      "route_id": "710",
+      "stop_id": 20997
+    },
+  ]
+}
+
 def buses():
   handle = urllib.request.urlopen('http://ridecenter.org:7017/list')
   json_obj = json.loads(handle.read().decode('utf8'))
@@ -123,33 +150,21 @@ def buses():
   return json_obj
 
 def fake_buses():
+  # Doing a bit of math to make x and y move between two arbitrary stops over time
+  t = time.time()
+  x_t = abs(math.fmod(t, 60) - 30) / 30
+  y_t = abs(math.fmod(t, 60) - 30) / 30
+  x = 44.0540306 + x_t * (44.045139 - 44.0540306)
+  y = -121.30264 + y_t * ((-121.302605) - (-121.30264))
   return [
     {
-      'latitude': 0,
-      'longitude': 0,
+      'latitude': x,
+      'longitude': y,
       'bus': 1,
       'heading': 0,
       'speed': 0,
       'received': time.time(),
       'Route': '710'
-    },
-    {
-      'latitude': 0,
-      'longitude': 0,
-      'bus': 2,
-      'heading': 0,
-      'speed': 0,
-      'received': time.time(),
-      'Route': '711'
-    },
-    {
-      'latitude': 0,
-      'longitude': 0,
-      'bus': 3,
-      'heading': 0,
-      'speed': 0,
-      'received': time.time(),
-      'Route': '712'
     }
   ]
 
@@ -235,9 +250,11 @@ def log(transit_state):
     stops_info[route_id] = stop_info_on_route(route_id)
     print(f'stops_info: {route_id}')
 
+  print(stops_info)
+
   transit = TransitSystemTracker(
     fake_buses if MODE == 'DEBUG' else buses,
-    stops_info,
+    fake_stops if MODE == 'DEBUG' else stops_info,
     routes,
     log_stop_arrival,
     log_bus_position)

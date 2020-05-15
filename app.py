@@ -32,7 +32,7 @@ def new_stops():
     bus_tracker = tracker.trackers[bus_id]
     res[bus_id] = []
     bus_on_route = res[bus_id]
-    for stop_lat, stop_lon, stop_id in bus_tracker.new_stops:
+    for stop_lat, stop_lon, stop_id, received in bus_tracker.new_stops:
       bus_on_route.append({
         'route_id': bus_tracker.route_id,
         'lat': stop_lat,
@@ -47,7 +47,7 @@ def latest_stops():
     bus_tracker = tracker.trackers[bus_id]
     res[bus_id] = []
     bus_on_route = res[bus_id]
-    for stop_lat, stop_lon, stop_id in bus_tracker.latest_stops:
+    for stop_lat, stop_lon, stop_id, received in bus_tracker.latest_stops:
       bus_on_route.append({
         'route_id': bus_tracker.route_id,
         'lat': stop_lat,
