@@ -22,8 +22,8 @@ if 'CET_BUS_MODEL_DB' in os.environ:
 print(f'Running in {MODE} mode.')
 print(f'Using database {DB}.')
 
-def log_stop_arrival(bus_id, lat, lon, stop_id, received):
-  vals = [bus_id, lat, lon, stop_id, received]
+def log_stop_arrival(arr):
+  vals = [arr.bus_id, arr.lat, arr.lon, arr.stop_id, arr.received]
   stmt = '''
     insert or ignore into arrival_log (bus,lat,lon,stopid,received) values
       (?, ?, ?, ?, ?);
@@ -249,8 +249,6 @@ def log(transit_state):
     print(f'stops: {route_id}')
     stops_info[route_id] = stop_info_on_route(route_id)
     print(f'stops_info: {route_id}')
-
-  print(stops_info)
 
   transit = TransitSystemTracker(
     fake_buses if MODE == 'DEBUG' else buses,

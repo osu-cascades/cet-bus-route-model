@@ -7,6 +7,20 @@ import cet_bus
 from cet_bus.haversine import haversine
 from cet_bus.geo import Point
 
+class Arrival:
+  def __init__(self, lat, lon, bus_id, stop_id, received):
+    self.lat = lat
+    self.lon = lon
+    self.bus_id = bus_id
+    self.stop_id = stop_id
+    self.received = received
+
+  def __eq__(self, other):
+    return self.stop_id == other.stop_id
+
+  def __hash__(self):
+    return hash(self.stop_id)
+
 class BusTracker:
   # Start is the stop id at which the bus restarts its route
   # End is the stop id at which the bus turns around and flips its direction id
@@ -40,8 +54,13 @@ class BusTracker:
         if stop['stop_id'] == self.end:
           self.direction_id = 1
         if self.direction_id == int(stop['direction_id']):
-          current_stops.add((stop_pos.x, stop_pos.y, stop['stop_id'], new_bus['received']))
-    if self.latest_stops:
+          current_stops.add(Arrival(
+            stop_pos.x,
+            stop_pos.y,
+            new_bus['bus'],
+            stop['stop_id'],
+            new_bus['received']))
+    if self.latest_stops is not None:
       self.new_stops = current_stops - self.latest_stops
     else:
       self.new_stops = set()
@@ -71,8 +90,8 @@ class TransitSystemTracker:
         news = self.trackers[bus_id].new_stops
         if len(news):
           print(f'arrival: {news}')
-          for lat, lon, stop_id, received in news:
-            self.log_arrival(bus_id, lat, lon, stop_id, received)
+          for arrival in news:
+            self.log_arrival(arrival)
 
 
   def add_bus_tracker(self, bus_id, route_id):
