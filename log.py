@@ -134,7 +134,7 @@ routes =\
     '3136': Route(start=2456761, end=805200),
   }
 
-def log():
+def log(transit_state):
   global c
   conn = sqlite3.connect('test.db')
   c = conn.cursor()
@@ -165,4 +165,5 @@ def log():
   transit = TransitSystemTracker(buses, stops_info, routes)
   while True:
     transit.update()
+    transit_state['value'] = transit
     time.sleep(1)

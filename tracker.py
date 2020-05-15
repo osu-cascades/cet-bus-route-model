@@ -21,7 +21,7 @@ class BusTracker:
     self.direction_id = 0
     self.bus_stop_radius = 50
     self.new_stops = set()
-    self.latest_stops = None
+    self.latest_stops = set()
 
   def update(self, new_bus):
     try:
