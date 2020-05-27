@@ -2,8 +2,8 @@ import json
 import operator
 import math
 
-from .geo import Segment, Point, Polyline
-from .haversine import haversine
+from geo import Segment, Point, Polyline
+from haversine import haversine
 
 # Parse shape.json into a map where keys are shape ids and values are the
 # shapes represented as Polylines.

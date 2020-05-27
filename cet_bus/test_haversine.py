@@ -1,5 +1,5 @@
-from .geo import Point
-from .haversine import haversine
+from geo import Point
+from haversine import haversine
 import math
 import unittest
 

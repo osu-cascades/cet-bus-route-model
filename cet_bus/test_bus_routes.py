@@ -1,9 +1,9 @@
 import json
 import unittest
 
-from .geo import Point, Segment, Polyline
-from .bus_routes import *
-from .haversine import haversine
+from geo import Point, Segment, Polyline
+from bus_routes import *
+from haversine import haversine
 
 class TestBusRoutesMethods(unittest.TestCase):
   def test_enumate_shapes_has_correct_keys(self):

@@ -7,5 +7,5 @@ setup(name='cet_bus',
       author='Ethan Jones',
       author_email='rukokarasu@gmail.com',
       license='MIT',
-      packages=['cet_bus'],
+      packages=[],
       zip_safe=False)

@@ -1,4 +1,4 @@
-from .geo import Point, Segment, Polyline
+from geo import Point, Segment, Polyline
 import unittest
 
 class TestSegmentMethods(unittest.TestCase):
